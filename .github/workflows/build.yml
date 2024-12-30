@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['**/*.rb', '**/*.yml', '**/*.ru', '**/*.erb', '**/*.lock', '**/*.gemspec']
+  push:
+    branches:
+      - master
+    paths: ['**/*.rb', '**/*.yml', '**/*.ru', '**/*.erb', '**/*.lock', '**/*.gemspec']
+
+env:
+ BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+jobs:
+  mongoid-embedded-errors-build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        ruby: ['3.0.6', '3.1.4', '3.2.2', '3.3.4']
+        mongodb-version: ['4.4', '5.0', '6.0', '8.0']
+    steps:
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v1
+
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - name: Gems
+        id: gems
+        run: |
+          gem install bundler:2.5.9
+          bundle install -j 5
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.8.0
+        with:
+          mongodb-version: ${{ matrix.mongodb-version }}
+
+      - name: Run Tests
+        id: rspec-tests
+        run: |
+          bundle exec rspec
